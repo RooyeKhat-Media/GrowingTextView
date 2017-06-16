@@ -21,16 +21,22 @@ open class GrowingTextView: UITextView {
     
     // Trim white space and newline characters when end editing. Default is true
     @IBInspectable open var trimWhiteSpaceWhenEndEditing: Bool = true
+
+    // Minimum height of the textview
+    @IBInspectable open var minHeight: CGFloat = CGFloat(0)
     
     // Maximm height of the textview
     @IBInspectable open var maxHeight: CGFloat = CGFloat(0)
     
     // Placeholder properties
     // Need to set both placeHolder and placeHolderColor in order to show placeHolder in the textview
-    @IBInspectable open var placeHolder: NSString? {
+    @IBInspectable open var placeHolder: String? {
         didSet { setNeedsDisplay() }
     }
     @IBInspectable open var placeHolderColor: UIColor = UIColor(white: 0.8, alpha: 1.0) {
+        didSet { setNeedsDisplay() }
+    }
+    @IBInspectable open var attributedPlaceHolder: NSAttributedString? {
         didSet { setNeedsDisplay() }
     }
     @IBInspectable open var placeHolderLeftMargin: CGFloat = 5 {
@@ -95,8 +101,14 @@ open class GrowingTextView: UITextView {
         oldText = text
         oldWidth = bounds.width
         
-        let size = sizeThatFits(CGSize(width:bounds.size.width, height: CGFloat.greatestFiniteMagnitude))
-        let height = maxHeight > 0 ? min(size.height, maxHeight) : size.height
+        let size = sizeThatFits(CGSize(width: bounds.size.width, height: CGFloat.greatestFiniteMagnitude))
+        var height = size.height
+
+        // Constrain minimum height
+        height = minHeight > 0 ? max(height, minHeight) : height
+
+        // Constrain maximum height
+        height = maxHeight > 0 ? min(height, maxHeight) : height
         
         if (heightConstraint == nil) {
             heightConstraint = NSLayoutConstraint(item: self, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 1.0, constant: height)
@@ -115,25 +127,37 @@ open class GrowingTextView: UITextView {
     // Show placeholder
     override open func draw(_ rect: CGRect) {
         super.draw(rect)
+
         if text.isEmpty {
-            guard let placeHolder = placeHolder else { return }
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = textAlignment
-            
-            let rect = CGRect(x: textContainerInset.left + placeHolderLeftMargin,
-                              y: textContainerInset.top,
-                              width:   frame.size.width - textContainerInset.left - textContainerInset.right,
-                              height: frame.size.height)
-            
-            var attributes: [String: Any] = [
-                NSForegroundColorAttributeName: placeHolderColor,
-                NSParagraphStyleAttributeName: paragraphStyle
-            ]
-            if let font = font {
-                attributes[NSFontAttributeName] = font
+            let xValue = textContainerInset.left + placeHolderLeftMargin
+            let yValue = textContainerInset.top
+            let width = rect.size.width - xValue - textContainerInset.right
+            let height = rect.size.height - yValue - textContainerInset.bottom
+            let placeHolderRect = CGRect(x: xValue, y: yValue, width: width, height: height)
+
+            if let attributedPlaceholder = attributedPlaceHolder {
+                // Prefer to use attributedPlaceHolder
+                attributedPlaceholder.draw(in: placeHolderRect)
+            } else if let placeHolder = placeHolder {
+                // Otherwise user placeHolder and inherit `text` attributes
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.alignment = textAlignment
+
+                let rect = CGRect(x: textContainerInset.left + placeHolderLeftMargin,
+                                  y: textContainerInset.top,
+                                  width:   frame.size.width - textContainerInset.left - textContainerInset.right,
+                                  height: frame.size.height)
+
+                var attributes: [String: Any] = [
+                    NSForegroundColorAttributeName: placeHolderColor,
+                    NSParagraphStyleAttributeName: paragraphStyle
+                ]
+                if let font = font {
+                    attributes[NSFontAttributeName] = font
+                }
+
+                placeHolder.draw(in: rect, withAttributes: attributes)
             }
-            
-            placeHolder.draw(in: rect, withAttributes: attributes)
         }
     }
     

@@ -33,16 +33,13 @@ open class GrowingTextView: UITextView {
     @IBInspectable open var maxHeight: CGFloat = 0 {
         didSet { forceLayoutSubviews() }
     }
-    @IBInspectable open var placeHolder: String? {
+    @IBInspectable open var placeholder: String? {
         didSet { setNeedsDisplay() }
     }
-    @IBInspectable open var placeHolderColor: UIColor = UIColor(white: 0.8, alpha: 1.0) {
+    @IBInspectable open var placeholderColor: UIColor = UIColor(white: 0.8, alpha: 1.0) {
         didSet { setNeedsDisplay() }
     }
-    @IBInspectable open var attributedPlaceHolder: NSAttributedString? {
-        didSet { setNeedsDisplay() }
-    }
-    @IBInspectable open var placeHolderLeftMargin: CGFloat = 5 {
+    @IBInspectable open var attributedPlaceholder: NSAttributedString? {
         didSet { setNeedsDisplay() }
     }
     
@@ -141,41 +138,40 @@ open class GrowingTextView: UITextView {
     // Show placeholder if needed
     override open func draw(_ rect: CGRect) {
         super.draw(rect)
+        
         if text.isEmpty {
-            let xValue = textContainerInset.left + placeHolderLeftMargin
+            let xValue = textContainerInset.left + textContainer.lineFragmentPadding
             let yValue = textContainerInset.top
             let width = rect.size.width - xValue - textContainerInset.right
             let height = rect.size.height - yValue - textContainerInset.bottom
-            let placeHolderRect = CGRect(x: xValue, y: yValue, width: width, height: height)
+            let placeholderRect = CGRect(x: xValue, y: yValue, width: width, height: height)
             
-            if let attributedPlaceholder = attributedPlaceHolder {
-                // Prefer to use attributedPlaceHolder
-                attributedPlaceholder.draw(in: placeHolderRect)
-            } else if let placeHolder = placeHolder {
-                // Otherwise user placeHolder and inherit `text` attributes
+            if let attributedPlaceholder = attributedPlaceholder {
+                // Prefer to use attributedPlaceholder
+                attributedPlaceholder.draw(in: placeholderRect)
+            } else if let placeholder = placeholder {
+                // Otherwise user placeholder and inherit `text` attributes
                 let paragraphStyle = NSMutableParagraphStyle()
                 paragraphStyle.alignment = textAlignment
                 var attributes: [NSAttributedStringKey: Any] = [
-                    .foregroundColor: placeHolderColor,
+                    .foregroundColor: placeholderColor,
                     .paragraphStyle: paragraphStyle
                 ]
                 if let font = font {
                     attributes[.font] = font
                 }
                 
-                placeHolder.draw(in: placeHolderRect, withAttributes: attributes)
+                placeholder.draw(in: placeholderRect, withAttributes: attributes)
             }
         }
     }
     
     // Trim white space and new line characters when end editing.
     @objc func textDidEndEditing(notification: Notification) {
-        if let notificationObject = notification.object as? GrowingTextView {
-            if notificationObject === self {
-                if trimWhiteSpaceWhenEndEditing {
-                    text = text?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    setNeedsDisplay()
-                }
+        if let sender = notification.object as? GrowingTextView, sender == self {
+            if trimWhiteSpaceWhenEndEditing {
+                text = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+                setNeedsDisplay()
             }
             scrollToCorrectPosition()
         }
@@ -193,4 +189,3 @@ open class GrowingTextView: UITextView {
         }
     }
 }
-
